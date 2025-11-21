@@ -1,34 +1,50 @@
 import 'package:flutter/material.dart';
-import './diagonal_clipper.dart';
-import './register_screens.dart';
-import './teams_screen.dart'; // Asegúrate de que esta ruta sea correcta
+import './diagonal_clipper.dart'; // Importa el clipper para el fondo
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: false, // Evita que el contenido se mueva con el teclado
       body: Stack(
         children: [
-          Container(color: const Color(0xFF671111)),
+          // 1. Fondo de color sólido (Marrón/Vino)
+          Container(
+            color: const Color(0xFF671111), 
+          ),
+          
+          // 2. Fondo Diagonal Blanco (La superposición)
           ClipPath(
-            clipper: DiagonalClipper(),
+            clipper: DiagonalClipper(), 
             child: Container(
               height: size.height,
               width: size.width,
               color: Colors.white,
             ),
           ),
+
+          // 3. Contenido Principal (Título y Formulario de Registro)
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 25.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Botón de regreso (para cerrar la pantalla de registro)
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Color(0xFF671111), size: 30,),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(height: 20), // Espacio después del botón de regreso
+
+                  // Área del Formulario de Registro (tarjeta blanca con sombra)
                   Container(
                     width: size.width * 0.85,
                     padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 25),
@@ -46,25 +62,32 @@ class LoginScreen extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset(
-                          'assets/images/logo.png',
-                          height: 120,
+                        const Text(
+                          'Crear Cuenta', // Título de la pantalla
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF671111)),
                         ),
                         const SizedBox(height: 30),
+
+                        // Campo de Nuevo Usuario
                         TextField(
                           decoration: InputDecoration(
-                            labelText: 'Usuario',
+                            labelText: 'Nuevo Usuario',
                             border: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.grey),
                             ),
                             focusedBorder: UnderlineInputBorder(
                               borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2.0),
                             ),
-                            prefixIcon: const Icon(Icons.person, color: Colors.grey),
+                            prefixIcon: const Icon(Icons.person_add, color: Colors.grey),
                             labelStyle: const TextStyle(color: Colors.grey),
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Campo de Contraseña
                         TextField(
                           obscureText: true,
                           decoration: InputDecoration(
@@ -79,59 +102,44 @@ class LoginScreen extends StatelessWidget {
                             labelStyle: const TextStyle(color: Colors.grey),
                           ),
                         ),
+                        const SizedBox(height: 20),
+
+                        // Campo de Confirmar Contraseña
+                        TextField(
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: 'Confirmar Contraseña',
+                            border: const UnderlineInputBorder(
+                              borderSide: BorderSide(color: Colors.grey),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2.0),
+                            ),
+                            prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                            labelStyle: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
                         const SizedBox(height: 40),
+
+                        // Botón de Crear Cuenta
                         ElevatedButton(
                           onPressed: () {
-                            debugPrint('Login presionado');
-                            Navigator.pushReplacement( // Usamos pushReplacement para no poder regresar al Login
-                              context,
-                              MaterialPageRoute(builder: (context) => const TeamsScreen()),
-                            );
-                            // TODO: Implementar la navegación a la pantalla de Equipos
+                            // TODO: Implementar la lógica para guardar el usuario
+                            debugPrint('Cuenta creada');
+                            Navigator.of(context).pop(); // Regresa a la pantalla anterior (Login)
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF671111),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 80, vertical: 15),
+                                horizontal: 60, vertical: 15),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                             elevation: 5,
                           ),
                           child: const Text(
-                            'Login',
+                            'Registrar', // Cambiado a "Registrar"
                             style: TextStyle(fontSize: 18, color: Colors.white),
-                          ),
-                        ),
-                        const SizedBox(height: 15),
-                        
-                        // --- ENLACE PARA ABRIR LA PANTALLA DE REGISTRO ---
-                        TextButton(
-                          onPressed: () {
-                            // Usa Navigator.push para ir a la nueva pantalla (no un modal)
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                            );
-                          },
-                          child: const Text(
-                            'Crear Cuenta',
-                            style: TextStyle(
-                              color: Color(0xFF671111), 
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                        // -------------------------------------------------
-
-                        const SizedBox(height: 30),
-                        const Text(
-                          'Ing. Jose Ramon Rubio Bojorquez',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
