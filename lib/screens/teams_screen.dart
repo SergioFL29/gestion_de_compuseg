@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 // Importa las pantallas que vamos a necesitar
 import './new_folio_screen.dart'; // Crearemos esta después
 import './delivery_screen.dart'; // Crearemos esta después
+import './login_screens.dart';
 
 class TeamsScreen extends StatefulWidget {
   const TeamsScreen({super.key});
@@ -40,7 +41,7 @@ class _TeamsScreenState extends State<TeamsScreen> {
                   Center(
                     child: Image.asset(
                       'assets/images/logo.png', // Logo que ya tienes
-                      height: 80,
+                      height: 180,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -122,7 +123,11 @@ class _TeamsScreenState extends State<TeamsScreen> {
       Navigator.push(context, MaterialPageRoute(builder: (context) => const DeliveryScreen()));
     } else if (result == 'Logout') {
       // TODO: Implementar lógica de deslogueo y regresar a Login
-      Navigator.popUntil(context, (route) => route.isFirst); 
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false, 
+      );
     }
   }
 
@@ -214,61 +219,54 @@ class _TeamsScreenState extends State<TeamsScreen> {
   }
   
   // 5. Widget para construir la Tabla (El mismo de antes)
-  Widget buildTeamsTable() {
-    // Definimos las columnas de la tabla (simulado para el diseño)
-    List<Map<String, String>> mockData = [
-      {'Folio': 'HGT02', 'Maquina': 'Asus', 'Estado': 'Por reparar'},
-      {'Folio': 'AVT21', 'Maquina': 'Lenovo', 'Estado': 'Por entregar'},
-      {'Folio': 'VFD12', 'Maquina': 'HP', 'Estado': 'Entregada'},
-      // Añadir más filas vacías para simular la altura de la tabla
-      {'Folio': '', 'Maquina': '', 'Estado': ''},
-      {'Folio': '', 'Maquina': '', 'Estado': ''},
-      {'Folio': '', 'Maquina': '', 'Estado': ''},
-      {'Folio': '', 'Maquina': '', 'Estado': ''},
-      {'Folio': '', 'Maquina': '', 'Estado': ''},
-    ];
+ Widget buildTeamsTable() {
+    // 1. LISTA VACÍA: Eliminamos los datos de prueba.
+    //    Más adelante, esta lista se llenará con datos de la base de datos.
+    List<Map<String, String>> data = []; 
 
-    return DataTable(
-      columnSpacing: 10,
-      horizontalMargin: 10,
-      dataRowMinHeight: 35,
-      dataRowMaxHeight: 35,
-      headingRowHeight: 40,
-      columns: const [
-        DataColumn(label: Text('Folio', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-        DataColumn(label: Text('Maquina', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-        DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-      ],
-      rows: mockData.map((data) {
-        return DataRow(
-          cells: [
-            DataCell(Text(data['Folio']!, style: const TextStyle(fontSize: 12))),
-            DataCell(Text(data['Maquina']!, style: const TextStyle(fontSize: 12))),
-            DataCell(
-              DropdownButton<String>(
-                value: data['Estado']!.isNotEmpty ? data['Estado'] : null,
-                hint: const Text('Estado'),
-                underline: Container(),
-                isDense: true,
-                items: ['Por reparar', 'Por entregar', 'Entregada'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value, style: TextStyle(
-                      fontSize: 12,
-                      color: value == 'Por reparar' ? Colors.red.shade700 : 
-                             value == 'Por entregar' ? Colors.amber.shade700 : 
-                             value == 'Entregada' ? Colors.green.shade700 : Colors.black
-                    )),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  // TODO: Implementar lógica de cambio de estado en la BD
-                },
+    // 2. MENSAJE DE "SIN DATOS": Si la lista está vacía, mostramos un texto.
+    if (data.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            'No hay equipos registrados.\nUsa el menú para agregar un "Nuevo Folio".',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    // 3. TABLA (Solo se mostrará cuando 'data' tenga elementos)
+    return SingleChildScrollView( // Permite scrollear horizontalmente si la tabla es muy ancha
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columnSpacing: 15, // Espacio entre columnas ajustado para móviles
+        horizontalMargin: 10,
+        dataRowMinHeight: 40,
+        dataRowMaxHeight: 40,
+        headingRowHeight: 45,
+        // Encabezados de las columnas
+        columns: const [
+          DataColumn(label: Text('Folio', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Máquina', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
+        ],
+        // Generación de filas (ahora mismo estará vacío)
+        rows: data.map((row) {
+          return DataRow(
+            cells: [
+              DataCell(Text(row['Folio']!)),
+              DataCell(Text(row['Maquina']!)),
+              DataCell(
+                // Aquí irá la lógica del color del estado más adelante
+                Text(row['Estado']!), 
               ),
-            ),
-          ],
-        );
-      }).toList(),
+            ],
+          );
+        }).toList(),
+      ),
     );
   }
 }
