@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/user_model.dart';
+import '../models/folio_model.dart';
 
 class DatabaseHelper {
   // Instancia única (Singleton) para no abrir múltiples conexiones
@@ -37,6 +38,19 @@ class DatabaseHelper {
       password TEXT
     )
     ''');
+    // Tabla de Folios
+    await db.execute('''
+    CREATE TABLE folios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      folioCode TEXT,
+      nombreCliente TEXT,
+      telefono TEXT,
+      equipo TEXT,
+      descripcion TEXT,
+      estado TEXT,
+      userId INTEGER
+    )
+    ''');
 
     // NOTA: Aquí agregaremos la tabla de 'folios' más adelante
   }
@@ -71,5 +85,38 @@ class DatabaseHelper {
     } else {
       return null; // Credenciales incorrectas
     }
+  }
+  // --- FOLIOS (NUEVO) ---
+  Future<int> createFolio(Folio folio) async {
+    final db = await instance.database;
+    return await db.insert('folios', folio.toMap());
+  }
+  
+  // Obtener folios SOLO del usuario actual
+  Future<List<Folio>> getFoliosByUserId(int userId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'folios',
+      where: 'userId = ?', // Filtro mágico
+      whereArgs: [userId],
+    );
+    return result.map((json) => Folio.fromMap(json)).toList();
+  }
+  Future<int> updateFolioStatus(int id, String newStatus) async {
+    final db = await instance.database;
+    return await db.update(
+      'folios',
+      {'estado': newStatus},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // 2. Contar cuántos folios tiene un usuario (Para el autollenado)
+  Future<int> getFolioCount(int userId) async {
+    final db = await instance.database;
+    // Sqflite devuelve una lista, usamos Sqflite.firstIntValue para obtener el número
+    var x = await db.rawQuery('SELECT COUNT (*) from folios WHERE userId = ?', [userId]);
+    return Sqflite.firstIntValue(x) ?? 0;
   }
 }

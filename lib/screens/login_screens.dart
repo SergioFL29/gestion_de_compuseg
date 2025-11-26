@@ -28,16 +28,18 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       return;
     }
-
+    
     // Consultar a la BD
     User? loggedUser = await DatabaseHelper.instance.loginUser(user, pass);
 
     if (loggedUser != null) {
       // Login Exitoso
-      if (mounted) {
+     if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const TeamsScreen()),
+          // 1. Quitamos 'const'
+          // 2. Agregamos 'currentUser: loggedUser'
+          MaterialPageRoute(builder: (context) => TeamsScreen(currentUser: loggedUser)), 
         );
       }
     } else {
