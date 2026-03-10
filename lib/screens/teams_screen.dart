@@ -35,12 +35,25 @@ class _TeamsScreenState extends State<TeamsScreen> {
   }
 
   // Cargar datos de la BD
-  Future<void> _refreshFolios() async {
+ Future<void> _refreshFolios() async {
     setState(() => isLoading = true);
     if (widget.currentUser.id != null) {
-      // 1. Obtenemos TODOS los folios del usuario
-      allFolios = await DatabaseHelper.instance.getFoliosByUserId(widget.currentUser.id!);
-      // 2. Aplicamos los filtros actuales para decidir qué mostrar
+      // Obtenemos los datos con el JOIN
+      final data = await DatabaseHelper.instance.getFoliosFull(widget.currentUser.id!);
+      
+      // Convertimos los Mapas a objetos Folio manualmente 
+      // (Asegúrate de que tu modelo Folio acepte nombreCliente y telefono)
+      allFolios = data.map((json) => Folio(
+        id: json['id'],
+        folioCode: json['folioCode'],
+        nombreCliente: json['nombre'], // Viene del JOIN
+        telefono: json['telefono'],    // Viene del JOIN
+        equipo: json['equipo'],
+        descripcion: json['descripcion'],
+        estado: json['estado'],
+        userId: json['userId'],
+      )).toList();
+
       _applyFilters();
     }
     setState(() => isLoading = false);
@@ -143,7 +156,11 @@ class _TeamsScreenState extends State<TeamsScreen> {
       );
       if (result == true) _refreshFolios();
     } else if (result == 'Entrega') {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const DeliveryScreen()));
+      Navigator.push(
+        context, 
+        // Le pasamos el ID del usuario actual y quitamos el 'const'
+        MaterialPageRoute(builder: (context) => DeliveryScreen(currentUserId: widget.currentUser.id!))
+      );
     } else if (result == 'Logout') {
       Navigator.pushAndRemoveUntil(
         context,

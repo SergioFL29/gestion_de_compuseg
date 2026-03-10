@@ -39,28 +39,30 @@ class _NewFolioScreenState extends State<NewFolioScreen> {
     });
   }
 
-  void _saveFolio() async {
-    if (_folioController.text.isEmpty || _nombreController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El Nombre es obligatorio'))
-      );
+ void _saveFolio() async {
+    if (_nombreController.text.isEmpty || _telefonoController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nombre y Teléfono son obligatorios')));
       return;
     }
 
-    Folio newFolio = Folio(
-      folioCode: _folioController.text,
-      nombreCliente: _nombreController.text,
-      telefono: _telefonoController.text,
-      equipo: _equipoController.text,
-      descripcion: _descController.text,
-      estado: 'Por reparar', // Estado inicial
-      userId: widget.currentUserId, 
+    // 1. Crear o recuperar el ID del cliente
+    int clienteId = await DatabaseHelper.instance.createCliente(
+      _nombreController.text,
+      _telefonoController.text,
+      widget.currentUserId,
     );
 
-    await DatabaseHelper.instance.createFolio(newFolio);
+    // 2. Guardar el folio vinculado a ese cliente
+    await DatabaseHelper.instance.createFolio({
+      'folioCode': _folioController.text,
+      'clienteId': clienteId,
+      'equipo': _equipoController.text,
+      'descripcion': _descController.text,
+      'estado': 'Por reparar',
+      'userId': widget.currentUserId,
+    });
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Folio guardado')));
       Navigator.pop(context, true);
     }
   }

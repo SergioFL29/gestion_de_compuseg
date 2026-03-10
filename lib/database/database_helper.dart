@@ -4,76 +4,74 @@ import '../models/user_model.dart';
 import '../models/folio_model.dart';
 
 class DatabaseHelper {
-  // Instancia única (Singleton) para no abrir múltiples conexiones
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
   DatabaseHelper._init();
 
-  // Getter para obtener la base de datos (la abre si no existe)
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDB('compuseg.db');
     return _database!;
   }
 
-  // Inicializar la BD
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 2, // Subimos la versión para que ejecute cambios
+      onCreate: _createDB,
+      onUpgrade: _onUpgrade,
+    );
   }
 
-  // Crear las tablas (Solo se ejecuta la primera vez que se instala la app)
   Future _createDB(Database db, int version) async {
-    // Tabla de Usuarios
-    // id: Autoincremental
-    // username: Texto único (no puede haber dos iguales)
-    // password: Texto
+    // 1. Tabla de Usuarios
     await db.execute('''
-    CREATE TABLE users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      password TEXT
-    )
-    ''');
-    // Tabla de Folios
-    await db.execute('''
-    CREATE TABLE folios (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      folioCode TEXT,
-      nombreCliente TEXT,
-      telefono TEXT,
-      equipo TEXT,
-      descripcion TEXT,
-      estado TEXT,
-      userId INTEGER
-    )
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL
+      )
     ''');
 
-    // NOTA: Aquí agregaremos la tabla de 'folios' más adelante
+    // 2. NUEVA Tabla de Clientes
+    await db.execute('''
+      CREATE TABLE clientes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        telefono TEXT NOT NULL,
+        userId INTEGER NOT NULL
+      )
+    ''');
+
+    // 3. Tabla de Folios (Vinculada a clienteId)
+    await db.execute('''
+      CREATE TABLE folios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        folioCode TEXT NOT NULL,
+        clienteId INTEGER NOT NULL,
+        equipo TEXT NOT NULL,
+        descripcion TEXT NOT NULL,
+        estado TEXT NOT NULL,
+        userId INTEGER NOT NULL
+      )
+    ''');
   }
-
-  // --- MÉTODOS DE USUARIO ---
-
-  // 1. Registrar Usuario
+   // --- MÉTODOS DE USUARIO (REINSTALADOS) ---
   Future<int> registerUser(User user) async {
     final db = await instance.database;
     try {
-      // insert devuelve el ID del nuevo usuario
       return await db.insert('users', user.toMap());
     } catch (e) {
-      // Si falla (ej. usuario duplicado), devuelve -1
       return -1;
     }
   }
 
-  // 2. Login de Usuario (Verificar credenciales)
   Future<User?> loginUser(String username, String password) async {
     final db = await instance.database;
-    
-    // Busca un usuario que coincida con el nombre Y la contraseña
     final maps = await db.query(
       'users',
       where: 'username = ? AND password = ?',
@@ -83,40 +81,61 @@ class DatabaseHelper {
     if (maps.isNotEmpty) {
       return User.fromMap(maps.first);
     } else {
-      return null; // Credenciales incorrectas
+      return null;
     }
   }
-  // --- FOLIOS (NUEVO) ---
-  Future<int> createFolio(Folio folio) async {
-    final db = await instance.database;
-    return await db.insert('folios', folio.toMap());
-  }
-  
-  // Obtener folios SOLO del usuario actual
-  Future<List<Folio>> getFoliosByUserId(int userId) async {
-    final db = await instance.database;
-    final result = await db.query(
-      'folios',
-      where: 'userId = ?', // Filtro mágico
-      whereArgs: [userId],
-    );
-    return result.map((json) => Folio.fromMap(json)).toList();
-  }
-  Future<int> updateFolioStatus(int id, String newStatus) async {
-    final db = await instance.database;
-    return await db.update(
-      'folios',
-      {'estado': newStatus},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+  // Función para manejar la actualización de la BD sin borrar todo
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('DROP TABLE IF EXISTS folios'); // Borramos la vieja para evitar conflictos de columnas
+      await _createDB(db, newVersion);
+    }
   }
 
-  // 2. Contar cuántos folios tiene un usuario (Para el autollenado)
+  // --- MÉTODOS PARA CLIENTES ---
+  Future<int> createCliente(String nombre, String telefono, int userId) async {
+    final db = await instance.database;
+    // Verificamos si ya existe por teléfono para no duplicar
+    final res = await db.query('clientes', where: 'telefono = ? AND userId = ?', whereArgs: [telefono, userId]);
+    if (res.isNotEmpty) return res.first['id'] as int;
+    
+    return await db.insert('clientes', {
+      'nombre': nombre,
+      'telefono': telefono,
+      'userId': userId,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getClientes(int userId) async {
+    final db = await instance.database;
+    return await db.query('clientes', where: 'userId = ?', whereArgs: [userId]);
+  }
+
+  // --- MÉTODOS PARA FOLIOS (CON JOIN PARA TRAER NOMBRE DEL CLIENTE) ---
+  Future<int> createFolio(Map<String, dynamic> folioData) async {
+    final db = await instance.database;
+    return await db.insert('folios', folioData);
+  }
+
+  Future<List<Map<String, dynamic>>> getFoliosFull(int userId) async {
+    final db = await instance.database;
+    // Hacemos un JOIN para obtener los datos del cliente junto con el folio
+    return await db.rawQuery('''
+      SELECT folios.*, clientes.nombre, clientes.telefono 
+      FROM folios 
+      INNER JOIN clientes ON folios.clienteId = clientes.id
+      WHERE folios.userId = ?
+    ''', [userId]);
+  }
+
+  Future<int> updateFolioStatus(int id, String newStatus) async {
+    final db = await instance.database;
+    return await db.update('folios', {'estado': newStatus}, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<int> getFolioCount(int userId) async {
     final db = await instance.database;
-    // Sqflite devuelve una lista, usamos Sqflite.firstIntValue para obtener el número
     var x = await db.rawQuery('SELECT COUNT (*) from folios WHERE userId = ?', [userId]);
     return Sqflite.firstIntValue(x) ?? 0;
   }
-}
+} 
